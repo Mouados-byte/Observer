@@ -12,15 +12,16 @@ impl DataTemplate {
         name: String,
         content: Option<DataTypes>,
         subscribers: Option<Vec<u32>>,
-    ) -> Data {
+    ) -> u32 {
+        let id = self.data.len().try_into().unwrap_or(0) + 1;
         let data = Data::new(
-            self.data.len().try_into().unwrap_or(0) + 1,
+            id,
             name,
             content,
             subscribers,
-            Some(self.clone())
         );
-        return self.add_data(data);
+        self.data.push(data);
+        return id;
     }
 
     fn add_data(&mut self, data: Data) -> Data {
@@ -60,9 +61,14 @@ impl DataTemplate {
             
             println!("{:?}", subscribers);
             for subscriber in subscribers{
-                println!("Change happens to {}", subscriber);
-                println!("affected content {}", self.data[data_index].content);
+                if let Some(subscriber_index) = self.data.iter().position(|data| data.id == subscriber){
+                    println!("Change happens to {}", subscriber);
+                    println!("affected content {}", self.data[data_index].content);
+                    self.data[subscriber_index].content = self.data[data_index].clone().content;
+                    println!("{:?}", self.data[subscriber_index])
+                }
             }
+            println!("{:?}", self.data)
         }
     }
 }
@@ -82,7 +88,6 @@ impl Data {
         name: String,
         content: Option<DataTypes>,
         subscribers: Option<Vec<u32>>,
-        manager: Option<DataTemplate>,
     ) -> Self {
         let mut content_type: ContentType;
         let mut data_content: String;
@@ -129,6 +134,15 @@ impl Data {
         }
     }
 }
+
+#[derive(Copy, Clone, Debug)]
+enum ContentType {
+    StringType,
+    IntegerType,
+    FloatType,
+    BooleanType,
+}
+
 
 enum DataTypes {
     StringType(String),
@@ -192,44 +206,37 @@ impl DataTypes {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
-enum ContentType {
-    StringType,
-    IntegerType,
-    FloatType,
-    BooleanType,
-}
-
 fn main() {
     let mut data_manager = DataTemplate { data: Vec::new() };
-    let mut data1 = data_manager.create_data(
+    let data_id1 = data_manager.create_data(
         String::from("Data1"),
         Some(DataTypes::StringType(String::from("Hello"))),
         None,
     );
 
-    let mut data2 = data_manager.create_data(
+    let data_id2 = data_manager.create_data(
         String::from("Data2"),
         Some(DataTypes::IntegerType(42)),
-        Some(vec![data1.id]),
+        Some(vec![data_id1]),
     );
 
-    let mut data3 = data_manager.create_data(
+    let data_id3 = data_manager.create_data(
         String::from("Data3"),
         Some(DataTypes::FloatType(3.14159)),
-        Some(vec![data2.id]),
+        Some(vec![data_id2]),
     );
 
-    let mut data4 = data_manager.create_data(
+    let data_id4 = data_manager.create_data(
         String::from("Data4"),
         Some(DataTypes::BooleanType(true)),
-        Some(vec![data3.id]),
+        Some(vec![data_id3]),
     );
 
     for i in &data_manager.data {
         println!("{}", i.parse_content());
     }
 
-    data_manager.update(data2.id, Some(DataTypes::StringType(String::from("Test"))));
-    println!("{}", data2.parse_content());
+    data_manager.update(data_id2, Some(DataTypes::StringType(String::from("Test"))));
+    data_manager.update(data_id4, Some(DataTypes::BooleanType(false)));
+    println!("{:?}", data_manager.data);
 }
